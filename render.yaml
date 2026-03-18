@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: driveiq-dashboard
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npx prisma db push && node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRATION
+        value: 8h
+      - key: CLAUDE_MODEL
+        value: claude-haiku-4-5-20251001
+      - key: SUGGESTIONS_MAX_TOKENS
+        value: 512
+      - key: SUGGESTIONS_ENABLED
+        value: true
+      - key: TAX_RATE
+        value: 0.0875
+      - key: POINTS_PER_DOLLAR
+        value: 10
+      - key: TIER_SILVER_THRESHOLD
+        value: 500
+      - key: TIER_GOLD_THRESHOLD
+        value: 1500
+      - key: TIER_PLATINUM_THRESHOLD
+        value: 5000
+      - key: USUAL_ORDER_THRESHOLD
+        value: 0.70
+      - key: DATABASE_URL
+        fromDatabase:
+          name: driveiq-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEBHOOK_SECRET
+        generateValue: true
+      # Set these manually in Render dashboard after first deploy:
+      # ANTHROPIC_API_KEY
+      # NEXT_PUBLIC_BASE_URL  (set to your render URL after first deploy)
+      # VISION_SERVICE_URL
+      # VISION_API_KEY
+
+databases:
+  - name: driveiq-db
+    plan: free
+    region: oregon
+    databaseName: driveiq
+    user: driveiq
