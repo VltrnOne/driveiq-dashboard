@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: npm ci && npx prisma generate && npm run build
-    startCommand: npx prisma db push && node server.js
+    startCommand: node server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -30,23 +30,11 @@ services:
         value: 5000
       - key: USUAL_ORDER_THRESHOLD
         value: 0.70
-      - key: DATABASE_URL
-        fromDatabase:
-          name: driveiq-db
-          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: WEBHOOK_SECRET
         generateValue: true
-      # Set these manually in Render dashboard after first deploy:
+      # Add these manually in Render dashboard:
+      # DATABASE_URL  → from Neon (neon.tech, free)
+      # NEXT_PUBLIC_BASE_URL → https://driveiq-dashboard.onrender.com
       # ANTHROPIC_API_KEY
-      # NEXT_PUBLIC_BASE_URL  (set to your render URL after first deploy)
-      # VISION_SERVICE_URL
-      # VISION_API_KEY
-
-databases:
-  - name: driveiq-db
-    plan: free
-    region: oregon
-    databaseName: driveiq
-    user: driveiq

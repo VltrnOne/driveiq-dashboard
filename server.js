@@ -2,10 +2,24 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
+const { execSync } = require('child_process');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
+
+// Run DB migrations at startup (non-fatal if DB not ready yet)
+if (process.env.DATABASE_URL) {
+  try {
+    console.log('[DriveIQ] Running prisma db push...');
+    execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+    console.log('[DriveIQ] Database schema up to date.');
+  } catch (e) {
+    console.warn('[DriveIQ] prisma db push failed (continuing):', e.message);
+  }
+} else {
+  console.warn('[DriveIQ] DATABASE_URL not set — skipping migrations.');
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
