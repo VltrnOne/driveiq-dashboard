@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #0D0D0D;
+  --background: #FAFAFA;
+}
+
+body {
+  background: #F5F0EB;
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.tier-BRONZE  { @apply bg-amber-100 text-amber-800; }
+.tier-SILVER  { @apply bg-gray-100 text-gray-700; }
+.tier-GOLD    { @apply bg-yellow-100 text-yellow-800; }
+.tier-PLATINUM { @apply bg-purple-100 text-purple-800; }
+
+.method-LPR   { @apply bg-blue-100 text-blue-800; }
+.method-QR    { @apply bg-green-100 text-green-800; }
+.method-FACE  { @apply bg-violet-100 text-violet-800; }
+.method-MANUAL { @apply bg-gray-100 text-gray-700; }
+
+.status-PENDING     { @apply bg-yellow-100 text-yellow-800; }
+.status-IN_PROGRESS { @apply bg-blue-100 text-blue-800; }
+.status-READY       { @apply bg-green-100 text-green-800; }
+.status-COMPLETE    { @apply bg-gray-100 text-gray-600; }
+.status-CANCELLED   { @apply bg-red-100 text-red-700; }

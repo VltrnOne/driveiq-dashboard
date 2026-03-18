@@ -1,0 +1,206 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Operator Auth ─────────────────────────────────────────────────────────────
+
+model Operator {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  name         String
+  passwordHash String
+  role         String            @default("STAFF") // STAFF | MANAGER | ADMIN
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  sessions     OperatorSession[]
+
+  @@index([email])
+  @@index([active])
+}
+
+model OperatorSession {
+  id           String   @id @default(uuid())
+  operatorId   String
+  token        String   @unique
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  operator     Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ─── Customers & Vehicles ─────────────────────────────────────────────────────
+
+model Customer {
+  id            String             @id @default(uuid())
+  name          String
+  phone         String?            @unique
+  email         String?            @unique
+  photoUrl      String?
+  rewardPoints  Int                @default(0)
+  tier          String             @default("BRONZE") // BRONZE | SILVER | GOLD | PLATINUM
+  preferences   String?            // JSON array string: ["oat milk","no sugar"]
+  allergies     String?            // JSON array string: ["nuts","gluten"]
+  notes         String?
+  faceEnrolled  Boolean            @default(false)
+  faceEmbedding String?            // JSON float array — migrate to pgvector above 1k customers
+  qrToken       String             @unique @default(uuid())
+  visitCount    Int                @default(0)
+  lastVisitAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  vehicles      Vehicle[]
+  orders        Order[]
+  rewardTxns    RewardTransaction[]
+  sessions      DriveThruSession[]
+
+  @@index([phone])
+  @@index([email])
+  @@index([qrToken])
+  @@index([tier])
+  @@index([createdAt])
+}
+
+model Vehicle {
+  id           String             @id @default(uuid())
+  customerId   String
+  licensePlate String             @unique
+  make         String?
+  model        String?
+  color        String?
+  year         Int?
+  isPrimary    Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sessions     DriveThruSession[]
+
+  @@index([customerId])
+  @@index([licensePlate])
+}
+
+// ─── Drive-Thru Sessions ──────────────────────────────────────────────────────
+
+model DriveThruSession {
+  id            String    @id @default(uuid())
+  vehicleId     String?
+  customerId    String?
+  detectedPlate String?
+  detectedAt    DateTime  @default(now())
+  confidence    Float?
+  method        String    @default("LPR") // LPR | QR | FACE | MANUAL
+  resolved      Boolean   @default(false)
+  resolvedAt    DateTime?
+  rawPayload    String?
+  vehicle       Vehicle?  @relation(fields: [vehicleId], references: [id])
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  orders        Order[]
+
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([detectedAt])
+  @@index([resolved])
+  @@index([method])
+}
+
+// ─── Menu ─────────────────────────────────────────────────────────────────────
+
+model MenuItem {
+  id          String      @id @default(uuid())
+  name        String
+  category    String      // COFFEE | TEA | FOOD | COLD_DRINK | SPECIALTY
+  price       Float
+  description String?
+  available   Boolean     @default(true)
+  imageUrl    String?
+  tags        String?     // JSON array string: ["vegan","popular"]
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+
+  @@index([category])
+  @@index([available])
+  @@index([sortOrder])
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id         String            @id @default(uuid())
+  customerId String?
+  sessionId  String?
+  subtotal   Float
+  tax        Float             @default(0)
+  total      Float
+  status     String            @default("PENDING") // PENDING | IN_PROGRESS | READY | COMPLETE | CANCELLED
+  method     String            @default("DRIVETHRU") // DRIVETHRU | WALKIN
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  customer   Customer?         @relation(fields: [customerId], references: [id])
+  session    DriveThruSession? @relation(fields: [sessionId], references: [id])
+  items      OrderItem[]
+  rewardTxns RewardTransaction[]
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([method])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int      @default(1)
+  unitPrice  Float
+  notes      String?
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+// ─── Rewards ──────────────────────────────────────────────────────────────────
+
+model RewardTransaction {
+  id         String   @id @default(uuid())
+  customerId String
+  points     Int
+  type       String   // EARNED | REDEEMED | BONUS | ADJUSTMENT
+  orderId    String?
+  note       String?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order      Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([customerId])
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── System Settings ──────────────────────────────────────────────────────────
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
