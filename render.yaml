@@ -1,3 +1,10 @@
+databases:
+  - name: driveiq-db
+    databaseName: driveiq
+    plan: starter          # $7/mo — lowest paid Render Postgres (free tier discontinued)
+    region: oregon
+    postgresMajorVersion: 16
+
 services:
   - type: web
     name: driveiq-dashboard
@@ -8,6 +15,15 @@ services:
     startCommand: node server.js
     healthCheckPath: /api/health
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: driveiq-db
+          property: connectionString
+      - key: NEXT_PUBLIC_BASE_URL
+        fromService:
+          name: driveiq-dashboard
+          type: web
+          property: url
       - key: NODE_ENV
         value: production
       - key: JWT_EXPIRATION
@@ -34,7 +50,5 @@ services:
         generateValue: true
       - key: WEBHOOK_SECRET
         generateValue: true
-      # Add these manually in Render dashboard:
-      # DATABASE_URL  → from Neon (neon.tech, free)
-      # NEXT_PUBLIC_BASE_URL → https://driveiq-dashboard.onrender.com
-      # ANTHROPIC_API_KEY
+      # Set these manually in Render dashboard → Environment:
+      # ANTHROPIC_API_KEY  → sk-ant-...

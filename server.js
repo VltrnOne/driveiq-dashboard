@@ -8,12 +8,30 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Run DB migrations at startup (non-fatal if DB not ready yet)
+// Run DB migrations + auto-seed at startup (non-fatal if DB not ready yet)
 if (process.env.DATABASE_URL) {
   try {
     console.log('[DriveIQ] Running prisma db push...');
     execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
     console.log('[DriveIQ] Database schema up to date.');
+
+    // Auto-seed on first boot: check if operators table is empty
+    try {
+      const countOut = execSync(
+        `node -e "const {PrismaClient}=require('@prisma/client');` +
+        `const p=new PrismaClient();` +
+        `p.operator.count().then(n=>{process.stdout.write(String(n));return p.$disconnect()})` +
+        `.catch(()=>{process.stdout.write('0')})"`,
+        { stdio: 'pipe', timeout: 15000 }
+      ).toString().trim();
+      if (countOut === '0') {
+        console.log('[DriveIQ] First boot — seeding database...');
+        execSync('npx tsx prisma/seed.ts', { stdio: 'inherit', timeout: 90000 });
+        console.log('[DriveIQ] Seeded. Login: admin@driveiq.local / driveiq-admin-2024');
+      }
+    } catch (seedErr) {
+      console.warn('[DriveIQ] Auto-seed skipped:', seedErr.message?.slice(0, 120));
+    }
   } catch (e) {
     console.warn('[DriveIQ] prisma db push failed (continuing):', e.message);
   }
