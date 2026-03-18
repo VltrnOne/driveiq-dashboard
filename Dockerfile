@@ -17,4 +17,4 @@ ENV PORT=10000
 ENV NODE_ENV=production
 
 # start.sh handles prisma db push + node server.js
-CMD ["bash", "start.sh"]
+CMD ["/bin/sh", "-c", "sh start.sh"]
