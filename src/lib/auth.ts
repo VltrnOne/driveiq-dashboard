@@ -2,16 +2,16 @@ import { SignJWT, jwtVerify } from 'jose';
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'change-me') {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('SECURITY: JWT_SECRET must be set to a strong random value in production');
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === 'change-me') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SECURITY: JWT_SECRET must be set to a strong random value in production');
+    }
+    console.warn('WARNING: JWT_SECRET is not set — set a strong secret in .env.local');
   }
-  console.warn('WARNING: JWT_SECRET is not set — set a strong secret in .env.local');
+  return new TextEncoder().encode(secret || 'change-me-in-env-local');
 }
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'change-me-in-env-local'
-);
 
 export interface SessionPayload {
   operatorId: string;
@@ -45,7 +45,7 @@ export async function generateAccessToken(payload: SessionPayload): Promise<stri
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(process.env.JWT_EXPIRATION || '8h')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function generateRefreshToken(): Promise<string> {
@@ -54,7 +54,7 @@ export async function generateRefreshToken(): Promise<string> {
 
 export async function verifyToken(token: string): Promise<SessionPayload> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as SessionPayload;
   } catch {
     throw new Error('Invalid or expired token');
